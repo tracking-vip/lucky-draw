@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lucky Draw</title>
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent-gold: linear-gradient(135deg, #f59e0b, #d97706);
+            --gold-glow: 0 0 20px rgba(245, 158, 11, 0.5);
+            --text-color: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding: 1rem;
+            overflow: hidden;
+        }
+
+        html {
+            height: -webkit-fill-available;
+        }
+
+        .main-container {
+            position: relative;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem 1.25rem 1.5rem 1.25rem;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.2rem;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Top-Right Refresh Round Button */
+        .refresh-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f8fafc;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .refresh-btn:active {
+            transform: rotate(180deg) scale(0.9);
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            width: 100%;
+        }
+
+        .game-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #38bdf8; /* Light blue matching round indicator */
+    cursor: pointer;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    transition: transform 0.2s ease;
+}
+        .game-title:active {
+            transform: scale(0.98);
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Mode Selection Relocated Farther Away */
+        .mode-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .mode-container label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .mode-container select {
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Wheel Canvas Stage - Responsive Mobile Fit */
+        .wheel-stage {
+            position: relative;
+            width: 100%;
+            max-width: 310px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 26px solid #ef4444;
+            z-index: 20;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+        }
+
+        .pointer::after {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: -5px;
+            width: 10px;
+            height: 10px;
+            background: #f8fafc;
+            border-radius: 50%;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 50%;
+            box-shadow: var(--gold-glow);
+            z-index: 5;
+        }
+
+        /* Spin Button */
+        .spin-btn {
+            background: var(--accent-gold);
+            color: #0f172a;
+            border: none;
+            padding: 0.9rem 2rem;
+            font-size: 1.15rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: var(--gold-glow), 0 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .spin-btn:active {
+            transform: scale(0.98);
+        }
+
+        .spin-btn:disabled {
+            background: #475569;
+            color: #94a3b8;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 1rem;
+        }
+
+        .modal.hidden {
+            display: none;
+            pointer-events: none;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .close-icon {
+            font-size: 1.5rem;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.2rem 0.5rem;
+        }
+
+        .admin-desc {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .rig-select {
+            background: #0f172a;
+            color: #fff;
+            border: 1px solid #475569;
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .save-btn {
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            width: 100%;
+            padding: 0.75rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 0.75rem;
+        }
+
+        /* Result Modal Styling */
+        .result-card {
+            text-align: center;
+        }
+
+        .confetti-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-highlight {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #f59e0b;
+            margin: 1rem 0;
+            text-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- Top-Right Refresh Button -->
+        <button id="refreshBtn" class="refresh-btn" title="Reset Round">↻</button>
+
+        <!-- Secret Double-Click Header -->
+        <div class="header">
+            <h1 id="secretTitle" class="game-title" title="Double click for Admin">✨ LUCKY DRAW ✨</h1>
+            <div class="subtitle" id="roundIndicator">Round 1</div>
+        </div>
+
+        <!-- Relocated Mode Selector -->
+        <div class="mode-container">
+            <label for="gameMode">Game Mode:</label>
+            <select id="gameMode">
+                <option value="color">6 Vibrant Colors</option>
+                <option value="number">Numbers 1 - 10</option>
+            </select>
+        </div>
+
+        <!-- Wheel Stage -->
+        <div class="wheel-stage">
+            <div class="pointer"></div>
+            <canvas id="wheelCanvas" width="400" height="400"></canvas>
+        </div>
+
+        <!-- Spin Action Button -->
+        <button id="spinBtn" class="spin-btn">SPIN WHEEL</button>
+    </div>
+
+    <!-- Hidden Admin Panel Modal -->
+    <div id="adminModal" class="modal hidden">
+        <div class="modal-content admin-card">
+            <div class="modal-header">
+                <h3>⚙️ Secret Admin Panel</h3>
+                <span class="close-icon" id="closeAdminBtn">&times;</span>
+            </div>
+            <p class="admin-desc">Pre-set targeted outcomes for up to 5 consecutive rounds:</p>
+            
+            <div class="round-rig-group">
+                <div class="form-group">
+                    <label for="rigRound1">Round 1 Target:</label>
+                    <select id="rigRound1" class="rig-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="rigRound2">Round 2 Target:</label>
+                    <select id="rigRound2" class="rig-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="rigRound3">Round 3 Target:</label>
+                    <select id="rigRound3" class="rig-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="rigRound4">Round 4 Target:</label>
+                    <select id="rigRound4" class="rig-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="rigRound5">Round 5 Target:</label>
+                    <select id="rigRound5" class="rig-select"></select>
+                </div>
+            </div>
+
+            <button id="saveAdminBtn" class="save-btn">Save Pre-sets & Close</button>
+        </div>
+    </div>
+
+    <!-- Winner Announcement Modal -->
+    <div id="resultModal" class="modal hidden">
+        <div class="modal-content result-card">
+            <div class="confetti-icon">🎉</div>
+            <h2>WINNER!</h2>
+            <div id="resultText" class="result-highlight">--</div>
+            <button id="closeResultBtn" class="spin-btn">CONTINUE</button>
+        </div>
+    </div>
+
+    <script>
+        // Data Configuration
+        const MODE_DATA = {
+            color: [
+                { label: 'Red', color: '#ef4444' },
+                { label: 'Blue', color: '#3b82f6' },
+                { label: 'Green', color: '#10b981' },
+                { label: 'Yellow', color: '#f59e0b' },
+                { label: 'Purple', color: '#8b5cf6' },
+                { label: 'Orange', color: '#f97316' }
+            ],
+            number: Array.from({ length: 10 }, (_, i) => ({
+                label: `${i + 1}`,
+                color: i % 2 === 0 ? '#2563eb' : '#059669'
+            }))
+        };
+
+        // Application State
+        let currentMode = 'color';
+        let currentRound = 1;
+        let startAngle = 0;
+        let isSpinning = false;
+
+        const riggedPlan = {
+            1: 'random',
+            2: 'random',
+            3: 'random',
+            4: 'random',
+            5: 'random'
+        };
+
+        // Audio Engine inspired by Wheel of Names
+        class WheelOfNamesSoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // Wheel of Names style crisp peg/ratchet click
+            playTick() {
+                if (!this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    
+                    // High-frequency click pulse (simulates plastic/wooden peg contacting pin)
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1200, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.015);
+
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.015);
+
+                    // Subtle low band body pop
+                    const bodyOsc = this.ctx.createOscillator();
+                    const bodyGain = this.ctx.createGain();
+
+                    bodyOsc.type = 'triangle';
+                    bodyOsc.frequency.setValueAtTime(220, now);
+                    bodyOsc.frequency.exponentialRampToValueAtTime(80, now + 0.02);
+
+                    bodyGain.gain.setValueAtTime(0.08, now);
+                    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+                    bodyOsc.connect(bodyGain);
+                    bodyGain.connect(this.ctx.destination);
+
+                    bodyOsc.start(now);
+                    bodyOsc.stop(now + 0.02);
+                } catch (e) {}
+            }
+
+            // Victory Sound
+            playWin() {
+                if (!this.ctx) return;
+                try {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+                        
+                        gain.gain.setValueAtTime(0, this.ctx.currentTime + idx * 0.08);
+                        gain.gain.linearRampToValueAtTime(0.12, this.ctx.currentTime + idx * 0.08 + 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.8);
+                        
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(this.ctx.currentTime + idx * 0.08);
+                        osc.stop(this.ctx.currentTime + idx * 0.08 + 0.8);
+                    });
+                } catch (e) {}
+            }
+        }
+
+        const audio = new WheelOfNamesSoundFX();
+
+        // DOM Elements
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const gameModeSelect = document.getElementById('gameMode');
+        const secretTitle = document.getElementById('secretTitle');
+        const roundIndicator = document.getElementById('roundIndicator');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        const adminModal = document.getElementById('adminModal');
+        const closeAdminBtn = document.getElementById('closeAdminBtn');
+        const saveAdminBtn = document.getElementById('saveAdminBtn');
+
+        const resultModal = document.getElementById('resultModal');
+        const resultText = document.getElementById('resultText');
+        const closeResultBtn = document.getElementById('closeResultBtn');
+
+        // Render Metallic Spinner Wheel
+        function drawWheel() {
+            const segments = MODE_DATA[currentMode];
+            const numSegments = segments.length;
+            const arcSize = (2 * Math.PI) / numSegments;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = centerX - 15;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Render Metallic Rim
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius + 10, 0, 2 * Math.PI);
+            const borderGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            borderGrad.addColorStop(0, '#f59e0b');
+            borderGrad.addColorStop(0.5, '#fbbf24');
+            borderGrad.addColorStop(1, '#78350f');
+            ctx.fillStyle = borderGrad;
+            ctx.fill();
+
+            // Render Wheel Slices
+            segments.forEach((seg, i) => {
+                const angle = startAngle + i * arcSize;
+
+                ctx.beginPath();
+                ctx.fillStyle = seg.color;
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+                ctx.lineTo(centerX, centerY);
+                ctx.fill();
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.stroke();
+
+                // Render Segment Labels
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 18px sans-serif';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 4;
+                
+                const labelAngle = angle + arcSize / 2;
+                ctx.translate(
+                    centerX + Math.cos(labelAngle) * (radius * 0.65),
+                    centerY + Math.sin(labelAngle) * (radius * 0.65)
+                );
+                ctx.rotate(labelAngle + Math.PI / 2);
+                ctx.fillText(seg.label, -ctx.measureText(seg.label).width / 2, 0);
+                ctx.restore();
+            });
+
+            // Render Center Knob
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 24, 0, 2 * Math.PI);
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#f59e0b';
+            ctx.stroke();
+        }
+
+        // Build Admin 5-Round Dropdowns
+        function updateAdminDropdowns() {
+            const selectIds = ['rigRound1', 'rigRound2', 'rigRound3', 'rigRound4', 'rigRound5'];
+
+            selectIds.forEach((id, rIdx) => {
+                const select = document.getElementById(id);
+                const roundNum = rIdx + 1;
+                select.innerHTML = '<option value="random">-- Pure Random --</option>';
+                
+                MODE_DATA[currentMode].forEach((seg, idx) => {
+                    const option = document.createElement('option');
+                    option.value = idx;
+                    option.innerText = seg.label;
+                    if (riggedPlan[roundNum] === idx.toString()) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // Spin Logic with 20-Second Duration
+        function spin() {
+            if (isSpinning) return;
+            audio.init();
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+
+            const segments = MODE_DATA[currentMode];
+            const numSegments = segments.length;
+            const arcSize = (2 * Math.PI) / numSegments;
+
+            // Target Determination
+            let targetIndex;
+            const currentRig = riggedPlan[currentRound];
+
+            if (currentRig !== undefined && currentRig !== 'random') {
+                targetIndex = parseInt(currentRig, 10);
+            } else {
+                targetIndex = Math.floor(Math.random() * numSegments);
+            }
+
+            // Stopping Angle Calculations (Pointer at 270 deg / 1.5 PI)
+            const targetSegmentCenter = targetIndex * arcSize + arcSize / 2;
+            let targetAngle = (1.5 * Math.PI) - targetSegmentCenter;
+            while (targetAngle < 0) targetAngle += 2 * Math.PI;
+
+            const fullSpins = 25 * 2 * Math.PI;
+            const finalAngle = startAngle + fullSpins + (targetAngle - (startAngle % (2 * Math.PI)));
+
+            const duration = 20000; // 20 seconds
+            const startTime = performance.now();
+            const initialAngle = startAngle;
+            let lastSegmentTick = -1;
+
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Smooth Deceleration Easing
+                const easeOut = 1 - Math.pow(1 - progress, 4);
+                startAngle = initialAngle + (finalAngle - initialAngle) * easeOut;
+
+                const currentSegmentTick = Math.floor((startAngle % (2 * Math.PI)) / arcSize);
+                if (currentSegmentTick !== lastSegmentTick) {
+                    audio.playTick();
+                    lastSegmentTick = currentSegmentTick;
+                }
+
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    audio.playWin();
+
+                    resultText.innerText = segments[targetIndex].label;
+                    resultModal.classList.remove('hidden');
+
+                    currentRound++;
+                    roundIndicator.innerText = `Round ${currentRound}`;
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Event Setup
+        function setupEvents() {
+            gameModeSelect.addEventListener('change', (e) => {
+                if (isSpinning) return;
+                currentMode = e.target.value;
+                startAngle = 0;
+                drawWheel();
+                updateAdminDropdowns();
+            });
+
+            spinBtn.addEventListener('click', spin);
+
+            // Refresh Round Reset
+            refreshBtn.addEventListener('click', () => {
+                if (isSpinning) return;
+                currentRound = 1;
+                roundIndicator.innerText = `Round ${currentRound}`;
+            });
+
+            // Secret Admin Opening
+            secretTitle.addEventListener('dblclick', () => {
+                updateAdminDropdowns();
+                adminModal.classList.remove('hidden');
+            });
+
+            closeAdminBtn.addEventListener('click', () => adminModal.classList.add('hidden'));
+            saveAdminBtn.addEventListener('click', () => {
+                riggedPlan[1] = document.getElementById('rigRound1').value;
+                riggedPlan[2] = document.getElementById('rigRound2').value;
+                riggedPlan[3] = document.getElementById('rigRound3').value;
+                riggedPlan[4] = document.getElementById('rigRound4').value;
+                riggedPlan[5] = document.getElementById('rigRound5').value;
+                adminModal.classList.add('hidden');
+            });
+
+            closeResultBtn.addEventListener('click', () => resultModal.classList.add('hidden'));
+        }
+
+        // Start
+        drawWheel();
+        setupEvents();
+    </script>
+</body>
+</html>
